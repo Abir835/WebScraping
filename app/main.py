@@ -1,9 +1,13 @@
-from fastapi import FastAPI
+import csv
+import os
+
+from fastapi import FastAPI, Response
 from pydantic import BaseModel
 from typing import List
 from database import get_database_connection
 from .scraper import scrape_quotes
 from dotenv import load_dotenv
+
 load_dotenv()
 app = FastAPI()
 
@@ -53,3 +57,31 @@ async def read_users():
 @app.get("/get_web_scrape_data")
 def get_web_scrape_data():
     return scrape_quotes()
+
+
+@app.get("/export_csv")
+async def export_csv(response: Response):
+    try:
+        connection = get_database_connection()
+        cursor = connection.cursor()
+        cursor.execute("SELECT * FROM scraping_data")
+        data = cursor.fetchall()
+
+        csv_file_path = os.getenv("download_file_path")
+        csv_file_path = os.path.join(csv_file_path, "scraping_data.csv")  # Append file name to the directory path
+
+        with open(csv_file_path, mode="w", newline="") as csvfile:
+            csv_writer = csv.writer(csvfile)
+            csv_writer.writerow([i[0] for i in cursor.description])
+            csv_writer.writerows(data)
+
+        response.headers["Content-Disposition"] = "attachment; filename=scraping_data.csv"
+        response.headers["Content-Type"] = "text/csv"
+
+        with open(csv_file_path, mode="r") as csv_file:
+            csv_content = csv_file.read()
+
+        return Response(content=csv_content, media_type="text/csv")
+    finally:
+        cursor.close()
+        connection.close()
