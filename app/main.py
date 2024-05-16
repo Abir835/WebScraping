@@ -1,5 +1,6 @@
 import csv
 import os
+from datetime import datetime
 
 from fastapi import FastAPI, Response
 from pydantic import BaseModel
@@ -67,15 +68,17 @@ async def export_csv(response: Response):
         cursor.execute("SELECT * FROM scraping_data")
         data = cursor.fetchall()
 
-        csv_file_path = os.getenv("download_file_path")
-        csv_file_path = os.path.join(csv_file_path, "scraping_data.csv")  # Append file name to the directory path
+        download_folder = os.getenv("download_file_path")
+        timestamp = datetime.now().strftime("%Y%m%d%H%M%S")
+        csv_file_name = f"scraping_data_{timestamp}.csv"
+        csv_file_path = os.path.join(download_folder, csv_file_name)
 
         with open(csv_file_path, mode="w", newline="") as csvfile:
             csv_writer = csv.writer(csvfile)
             csv_writer.writerow([i[0] for i in cursor.description])
             csv_writer.writerows(data)
 
-        response.headers["Content-Disposition"] = "attachment; filename=scraping_data.csv"
+        response.headers["Content-Disposition"] = f"attachment; filename={csv_file_name}"
         response.headers["Content-Type"] = "text/csv"
 
         with open(csv_file_path, mode="r") as csv_file:
