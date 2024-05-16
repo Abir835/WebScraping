@@ -3,7 +3,8 @@ from pydantic import BaseModel
 from typing import List
 from database import get_database_connection
 from .scraper import scrape_quotes
-
+from dotenv import load_dotenv
+load_dotenv()
 app = FastAPI()
 
 
